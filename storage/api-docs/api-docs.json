@@ -1,0 +1,878 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "API de Solicitud de Constancias",
+        "description": "API REST del parcial. El administrador tiene el menú completo. El registrador solo registra constancias y genera el informe por mes en PDF y CSV.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8081",
+            "description": "Servidor Docker (Apache)"
+        }
+    ],
+    "paths": {
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Iniciar sesión",
+                "description": "Administrador: admin@constancias.com / admin123. Registrador: registrador@constancias.com / registrador123.",
+                "operationId": "fb573f7bd70a8a6151564d63d4594fd1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@constancias.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "admin123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sesión iniciada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "example": "1|token"
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/Usuario"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Credenciales incorrectas o datos inválidos"
+                    }
+                }
+            }
+        },
+        "/api/me": {
+            "get": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Usuario autenticado",
+                "operationId": "10981ba5445ca5ab6a975e63535c5ba1",
+                "responses": {
+                    "200": {
+                        "description": "Datos del usuario",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Usuario"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Cerrar sesión",
+                "operationId": "50c48c531c43666933fc291d7b058c7e",
+                "responses": {
+                    "200": {
+                        "description": "Sesión cerrada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/constancias": {
+            "get": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Listar constancias",
+                "description": "Solo el administrador. El paginador devuelve 5 registros. Use estado=activa o estado=inactiva.",
+                "operationId": "3084ac1d17cbd390eb096f6cc8081c38",
+                "parameters": [
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "activa",
+                                "inactiva"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "mes",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 12,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "anio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Página de 5 constancias"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "El registrador no puede listar"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Registrar constancia",
+                "description": "Administrador y registrador. La fecha, la hora y el estado activa se asignan solos.",
+                "operationId": "25b0e1d709d431208b75599f1e604034",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConstanciaInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Constancia registrada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/constancias/{id}": {
+            "get": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Ver detalle",
+                "operationId": "dbb75abd31362f9c4998e7c834179523",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detalle de la constancia"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "404": {
+                        "description": "No se encontró el registro"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Actualizar constancia",
+                "description": "Solo el administrador. La fecha y la hora de solicitud no cambian.",
+                "operationId": "ea2e305f3fbdee08cf92c4aa11250fd0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConstanciaUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Constancia actualizada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "404": {
+                        "description": "No se encontró el registro"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Eliminar constancia",
+                "operationId": "729269bed111980dcc75862236c7486e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Constancia eliminada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "404": {
+                        "description": "No se encontró el registro"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/constancias/{id}/enviar-correo": {
+            "post": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Enviar correo cuando está lista",
+                "description": "Solo el administrador. El correo incluye el QR de la solicitud. Con MAIL_MAILER=log queda en storage/logs/laravel.log.",
+                "operationId": "6b613c5c49c155528eec70cafb66915f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Correo enviado"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "404": {
+                        "description": "No se encontró el registro"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/constancias/{id}/qr": {
+            "get": {
+                "tags": [
+                    "Constancias"
+                ],
+                "summary": "Código QR de la constancia",
+                "operationId": "0608d158a3a44f282014447096ea717c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Imagen PNG",
+                        "content": {
+                            "image/png": {}
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "404": {
+                        "description": "No se encontró el registro"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/pdf": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Informe PDF por mes",
+                "description": "Administrador y registrador. Se abre en el visor PDF. Incluye el resumen por mes, el detalle y el QR.",
+                "operationId": "b7bc85da97fd280825471ca42a2956d9",
+                "parameters": [
+                    {
+                        "name": "anio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "mes",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 12,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF en línea",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "422": {
+                        "description": "Mes o año inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/csv": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Informe CSV por mes",
+                "operationId": "3b4d61325f8a769676d05cef28d60f92",
+                "parameters": [
+                    {
+                        "name": "anio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "mes",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 12,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Archivo CSV",
+                        "content": {
+                            "text/csv": {}
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "422": {
+                        "description": "Mes o año inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/por-mes": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Cantidad de constancias por mes",
+                "operationId": "dd21fa476a8bf57d5b5f724e035e4da3",
+                "parameters": [
+                    {
+                        "name": "anio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resumen de los 12 meses"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/grafico": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Gráfico de activas e inactivas",
+                "description": "Solo el administrador. Hay que seleccionar el mes.",
+                "operationId": "b76fed884aa65e7f5975fafc6a41a734",
+                "parameters": [
+                    {
+                        "name": "mes",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 12,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    },
+                    {
+                        "name": "anio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Datos para el gráfico",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "anio": {
+                                            "type": "integer",
+                                            "example": 2026
+                                        },
+                                        "mes": {
+                                            "type": "integer",
+                                            "example": 10
+                                        },
+                                        "nombre_mes": {
+                                            "type": "string",
+                                            "example": "Octubre"
+                                        },
+                                        "activas": {
+                                            "type": "integer",
+                                            "example": 4
+                                        },
+                                        "inactivas": {
+                                            "type": "integer",
+                                            "example": 2
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "example": 6
+                                        },
+                                        "labels": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "example": [
+                                                "Activas",
+                                                "Inactivas"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer"
+                                            },
+                                            "example": [
+                                                4,
+                                                2
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "403": {
+                        "description": "Solo el administrador"
+                    },
+                    "422": {
+                        "description": "Debe seleccionar el mes"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Usuario": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Administrador"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@constancias.com"
+                    },
+                    "rol": {
+                        "type": "string",
+                        "enum": [
+                            "administrador",
+                            "registrador"
+                        ],
+                        "example": "administrador"
+                    },
+                    "permisos": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "constancias.ver",
+                            "constancias.crear",
+                            "reportes.pdf",
+                            "reportes.grafico"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "Constancia": {
+                "properties": {
+                    "id_constancias": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nombre_empleado": {
+                        "type": "string",
+                        "example": "María López"
+                    },
+                    "correo": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "maria.lopez@correo.com"
+                    },
+                    "movil": {
+                        "type": "string",
+                        "example": "88881234"
+                    },
+                    "tipo_de_constancia": {
+                        "type": "string",
+                        "example": "Laboral"
+                    },
+                    "descripcion": {
+                        "type": "string",
+                        "example": "Constancia laboral para trámite bancario."
+                    },
+                    "cantidad": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "fecha_de_solicitud": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-10-23"
+                    },
+                    "hora_de_solicitud": {
+                        "type": "string",
+                        "example": "08:15:00"
+                    },
+                    "estado_solicitud": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "Activa",
+                            "Inactiva"
+                        ],
+                        "example": "Activa"
+                    }
+                },
+                "type": "object"
+            },
+            "ConstanciaInput": {
+                "required": [
+                    "nombre_empleado",
+                    "correo",
+                    "movil",
+                    "tipo_de_constancia",
+                    "descripcion",
+                    "cantidad"
+                ],
+                "properties": {
+                    "nombre_empleado": {
+                        "type": "string",
+                        "maxLength": 150,
+                        "minLength": 3,
+                        "example": "María López"
+                    },
+                    "correo": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "maria.lopez@correo.com"
+                    },
+                    "movil": {
+                        "description": "Entre 8 y 20 dígitos. Puede incluir +, espacios y guiones.",
+                        "type": "string",
+                        "example": "88881234"
+                    },
+                    "tipo_de_constancia": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 3,
+                        "example": "Laboral"
+                    },
+                    "descripcion": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 10,
+                        "example": "Constancia laboral para trámite bancario."
+                    },
+                    "cantidad": {
+                        "type": "integer",
+                        "maximum": 99,
+                        "minimum": 1,
+                        "example": 1
+                    }
+                },
+                "type": "object"
+            },
+            "ConstanciaUpdate": {
+                "required": [
+                    "nombre_empleado",
+                    "correo",
+                    "movil",
+                    "tipo_de_constancia",
+                    "descripcion",
+                    "cantidad",
+                    "estado_solicitud"
+                ],
+                "type": "object",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/ConstanciaInput"
+                    },
+                    {
+                        "properties": {
+                            "estado_solicitud": {
+                                "description": "true = activa, false = inactiva",
+                                "type": "boolean",
+                                "example": false
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Token devuelto por POST /api/login. Ejemplo: Bearer 1|token",
+                "bearerFormat": "Sanctum",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Autenticación",
+            "description": "Login del administrador y del registrador"
+        },
+        {
+            "name": "Constancias",
+            "description": "Registro, listado paginado, detalle, actualización, eliminación, correo y QR"
+        },
+        {
+            "name": "Reportes",
+            "description": "PDF, CSV, resumen por mes y gráfico de activas e inactivas"
+        }
+    ]
+}
